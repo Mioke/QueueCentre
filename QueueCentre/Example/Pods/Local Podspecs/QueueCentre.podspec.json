@@ -1,0 +1,27 @@
+{
+  "name": "QueueCentre",
+  "version": "0.1.0",
+  "summary": "A short description of QueueCentre.",
+  "description": "TODO: Add long description of the pod here.",
+  "homepage": "https://github.com/mioke/QueueCentre",
+  "license": {
+    "type": "MIT",
+    "file": "LICENSE"
+  },
+  "authors": {
+    "Mioke": "mioke0428@gmail.com"
+  },
+  "source": {
+    "git": "https://github.com/mioke/QueueCentre.git",
+    "tag": "0.1.0"
+  },
+  "platforms": {
+    "ios": "13.0"
+  },
+  "source_files": "QueueCentre/Classes/**/*",
+  "dependencies": {
+    "RxSwift": [
+      "~> 6.5"
+    ]
+  }
+}
