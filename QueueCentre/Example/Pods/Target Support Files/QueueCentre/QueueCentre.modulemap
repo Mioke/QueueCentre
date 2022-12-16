@@ -1,0 +1,6 @@
+framework module QueueCentre {
+  umbrella header "QueueCentre-umbrella.h"
+
+  export *
+  module * { export * }
+}

@@ -1,0 +1,32 @@
+PODS:
+  - Nimble (10.0.0)
+  - QueueCentre (0.1.0):
+    - RxSwift (~> 6.5)
+  - Quick (2.2.1)
+  - RxSwift (6.5.0)
+
+DEPENDENCIES:
+  - Nimble (~> 10.0.0)
+  - QueueCentre (from `../`)
+  - Quick (~> 2.2.0)
+  - RxSwift
+
+SPEC REPOS:
+  trunk:
+    - Nimble
+    - Quick
+    - RxSwift
+
+EXTERNAL SOURCES:
+  QueueCentre:
+    :path: "../"
+
+SPEC CHECKSUMS:
+  Nimble: 5316ef81a170ce87baf72dd961f22f89a602ff84
+  QueueCentre: ee3f507c7ebafcb54bd2626ca544d6300aeec706
+  Quick: f5754d69b7013f5864c29aab9ae6f0c79c5bc200
+  RxSwift: 5710a9e6b17f3c3d6e40d6e559b9fa1e813b2ef8
+
+PODFILE CHECKSUM: 0e3def48b20a105bcea02bf0080aa1ea3cb9a78e
+
+COCOAPODS: 1.11.3

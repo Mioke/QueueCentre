@@ -1,0 +1,17 @@
+use_frameworks!
+
+platform :ios, '13.0'
+
+target 'QueueCentre_Example' do
+  pod 'QueueCentre', :path => '../'
+#  pod 'MIOSwiftyArchitecture/Assistance', :path => '/Users/kelanjiang/Documents/GitHub/SwiftArchitectureWithPOP'
+  
+  pod 'RxSwift'
+
+  target 'QueueCentre_Tests' do
+    inherit! :search_paths
+
+    pod 'Quick', '~> 2.2.0'
+    pod 'Nimble', '~> 10.0.0'
+  end
+end
