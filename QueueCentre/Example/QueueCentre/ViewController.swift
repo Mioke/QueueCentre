@@ -23,6 +23,7 @@ class ViewController: UIViewController {
             .subscribe(on: ConcurrentMainScheduler.instance)
             .subscribe { vms in
                 print(vms)
+                print(SchedulerCentre.shared.counters)
             } onError: { error in
                 print(error)
             }
@@ -40,7 +41,7 @@ class ViewController: UIViewController {
 class Coordinator {
     
 //    let workGroup: QueueCentre.WorkGroup = .priority(.default)
-    let processQueue: SerialDispatchQueueScheduler = .init(qos: .default)
+    let processQueue = SchedulerCentre.scheduler()
     
     let provider: Provider = .init()
     let store: Store = .init()
@@ -61,8 +62,8 @@ class Coordinator {
 class Provider {
 //    let workGroup: QueueCentre.WorkGroup = .priority(.default)
     
-    let sendingQueue: ConcurrentDispatchQueueScheduler = .init(qos: .default)
-    let reportingQueue: ConcurrentDispatchQueueScheduler = .init(qos: .default)
+    let sendingQueue = SchedulerCentre.asyncScheduler()
+    let reportingQueue = SchedulerCentre.asyncScheduler()
     
     func sendRequest<Result: Codable>() -> Observable<Result> {
         return Observable<Data>
@@ -93,8 +94,8 @@ class Store {
 //        }
 //    }
     
-    let recordQueue: SerialDispatchQueueScheduler = .init(qos: .userInteractive)
-    let reportingQueue: ConcurrentDispatchQueueScheduler = .init(qos: .default)
+    let recordQueue = SchedulerCentre.scheduler(priority: .high)
+    let reportingQueue = SchedulerCentre.asyncScheduler()
     
     func save<Model: Codable>(model: Model) -> Observable<Model> {
         return Observable<Model>.just(model)

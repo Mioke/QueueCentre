@@ -10,16 +10,18 @@ import RxSwift
 
 public class SchedulerCentre {
     
-    public let shared: SchedulerCentre = .init()
+    public static let shared: SchedulerCentre = .init()
     
-    public let counters: [SchedulerPriority: Counter] = [:]
+    public private(set) var counters: [SchedulerPriority: Counter] = [:]
+    
+    let lock: UnfairLock = .init()
     
     /// Request a scheduler. *You should keep the instance if you repeatly using it rather than request one every time.*
     /// - Parameter priority: The priority of the scheduler.
     /// - Returns:  A scheduler.
-    public static func scheduler(with priority: SchedulerPriority = .`default`) -> SchedulerType {
+    public static func scheduler(priority: SchedulerPriority = .`default`) -> SchedulerType {
         if let qos = priority.referenceToDisaptchQos() {
-            return ObservedSerialDispatchQueueScheduler(qos: qos)
+            return ObservedSerialDispatchQueueScheduler(qos: qos, priority: priority)
         }
         if priority == .ui {
             return RxSwift.MainScheduler.instance
@@ -30,7 +32,7 @@ public class SchedulerCentre {
     /// <#Description#>
     /// - Parameter priority: <#priority description#>
     /// - Returns: A async scheduler
-    public static func asyncScheduler(with priority: SchedulerPriority = .`default`) -> SchedulerType {
+    public static func asyncScheduler(priority: SchedulerPriority = .`default`) -> SchedulerType {
         if let qos = priority.referenceToDisaptchQos() {
             return ObservedConcurrentDispatchQueueScheduler(qos: qos)
         }
@@ -38,6 +40,23 @@ public class SchedulerCentre {
             return RxSwift.MainScheduler.asyncInstance
         }
         fatalError("Priority of scheduler is unsupported.")
+    }
+    
+    /// Get a counter of the priority.
+    /// - Parameter priority: The priority which counter count for.
+    /// - Returns: The counter.
+    public func getCounter(withPriority priority: SchedulerPriority) -> Counter {
+        if let counter = self.counters[priority] {
+            return counter
+        }
+        return lock.around {
+            if let counter = self.counters[priority] {
+                return counter
+            }
+            let counter = Counter()
+            self.counters[priority] = counter
+            return counter
+        }
     }
 }
 
@@ -57,8 +76,8 @@ extension SchedulerCentre {
                 return .background
             case .low:
                 return .utility
-            case .default:
-                return .default
+            case .`default`:
+                return .`default`
             case .high:
                 return .userInteractive
             case .highest:

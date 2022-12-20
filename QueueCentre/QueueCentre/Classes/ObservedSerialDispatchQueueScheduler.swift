@@ -18,8 +18,9 @@ open class ObservedSerialDispatchQueueScheduler: SchedulerType {
      - parameter serialQueue: Target dispatch queue.
      - parameter leeway: The amount of time, in nanoseconds, that the system will defer the timer.
      */
-    init(serialQueue: DispatchQueue, leeway: DispatchTimeInterval = DispatchTimeInterval.nanoseconds(0)) {
+    init(serialQueue: DispatchQueue, leeway: DispatchTimeInterval = DispatchTimeInterval.nanoseconds(0), priority: SchedulerCentre.SchedulerPriority = .default) {
         self.configuration = DispatchQueueConfiguration(queue: serialQueue, leeway: leeway)
+        self.priority = priority
     }
     
     /**
@@ -31,10 +32,10 @@ open class ObservedSerialDispatchQueueScheduler: SchedulerType {
      - parameter serialQueueConfiguration: Additional configuration of internal serial dispatch queue.
      - parameter leeway: The amount of time, in nanoseconds, that the system will defer the timer.
      */
-    public convenience init(internalSerialQueueName: String, serialQueueConfiguration: ((DispatchQueue) -> Void)? = nil, leeway: DispatchTimeInterval = DispatchTimeInterval.nanoseconds(0)) {
+    public convenience init(internalSerialQueueName: String, serialQueueConfiguration: ((DispatchQueue) -> Void)? = nil, leeway: DispatchTimeInterval = DispatchTimeInterval.nanoseconds(0), priority: SchedulerCentre.SchedulerPriority = .default) {
         let queue = DispatchQueue(label: internalSerialQueueName, attributes: [])
         serialQueueConfiguration?(queue)
-        self.init(serialQueue: queue, leeway: leeway)
+        self.init(serialQueue: queue, leeway: leeway, priority: priority)
     }
     
     /**
@@ -44,12 +45,12 @@ open class ObservedSerialDispatchQueueScheduler: SchedulerType {
      - parameter internalSerialQueueName: Name of internal serial dispatch queue proxy.
      - parameter leeway: The amount of time, in nanoseconds, that the system will defer the timer.
      */
-    public convenience init(queue: DispatchQueue, internalSerialQueueName: String, leeway: DispatchTimeInterval = DispatchTimeInterval.nanoseconds(0)) {
+    public convenience init(queue: DispatchQueue, internalSerialQueueName: String, leeway: DispatchTimeInterval = DispatchTimeInterval.nanoseconds(0), priority: SchedulerCentre.SchedulerPriority = .default) {
         // Swift 3.0 IUO
         let serialQueue = DispatchQueue(label: internalSerialQueueName,
                                         attributes: [],
                                         target: queue)
-        self.init(serialQueue: serialQueue, leeway: leeway)
+        self.init(serialQueue: serialQueue, leeway: leeway, priority: priority)
     }
     
     /**
@@ -60,8 +61,26 @@ open class ObservedSerialDispatchQueueScheduler: SchedulerType {
      - parameter leeway: The amount of time, in nanoseconds, that the system will defer the timer.
      */
     @available(macOS 10.10, *)
-    public convenience init(qos: DispatchQoS, internalSerialQueueName: String = "rx.global_dispatch_queue.serial", leeway: DispatchTimeInterval = DispatchTimeInterval.nanoseconds(0)) {
-        self.init(queue: DispatchQueue.global(qos: qos.qosClass), internalSerialQueueName: internalSerialQueueName, leeway: leeway)
+    public convenience init(qos: DispatchQoS, internalSerialQueueName: String = "qc.observed_global_dispatch_queue.serial", leeway: DispatchTimeInterval = DispatchTimeInterval.nanoseconds(0), priority: SchedulerCentre.SchedulerPriority = .default) {
+        self.init(queue: DispatchQueue.global(qos: qos.qosClass), internalSerialQueueName: internalSerialQueueName, leeway: leeway, priority: priority)
+    }
+    
+    
+    /// Inject observing before and after the action.
+    /// - Parameter action: Original action
+    /// - Returns: Observed action.
+    final func observe<StateType, ReturnType>(action: @escaping (StateType) -> ReturnType) -> (StateType) -> ReturnType {
+        return { [weak self] state -> ReturnType in
+            if let self = self {
+                SchedulerCentre.shared.getCounter(withPriority: self.priority).advance()
+            }
+            let metric = Metric(type: MetricMeasureType.self);
+            defer {
+                let duration = metric.call.end()
+                print(duration)
+            }
+            return action(state)
+        }
     }
     
     /**
@@ -72,7 +91,7 @@ open class ObservedSerialDispatchQueueScheduler: SchedulerType {
      - returns: The disposable object used to cancel the scheduled action (best effort).
      */
     public final func schedule<StateType>(_ state: StateType, action: @escaping (StateType) -> Disposable) -> Disposable {
-        self.scheduleInternal(state, action: action)
+        return self.scheduleInternal(state, action: observe(action: action))
     }
     
     func scheduleInternal<StateType>(_ state: StateType, action: @escaping (StateType) -> Disposable) -> Disposable {
@@ -88,7 +107,7 @@ open class ObservedSerialDispatchQueueScheduler: SchedulerType {
      - returns: The disposable object used to cancel the scheduled action (best effort).
      */
     public final func scheduleRelative<StateType>(_ state: StateType, dueTime: RxTimeInterval, action: @escaping (StateType) -> Disposable) -> Disposable {
-        self.configuration.scheduleRelative(state, dueTime: dueTime, action: action)
+        self.configuration.scheduleRelative(state, dueTime: dueTime, action: observe(action: action))
     }
     
     /**
@@ -101,6 +120,10 @@ open class ObservedSerialDispatchQueueScheduler: SchedulerType {
      - returns: The disposable object used to cancel the scheduled action (best effort).
      */
     public func schedulePeriodic<StateType>(_ state: StateType, startAfter: RxTimeInterval, period: RxTimeInterval, action: @escaping (StateType) -> StateType) -> Disposable {
-        self.configuration.schedulePeriodic(state, startAfter: startAfter, period: period, action: action)
+        self.configuration.schedulePeriodic(state, startAfter: startAfter, period: period, action: observe(action: action))
     }
+    
+    // MARK: - Observing
+    
+    let priority: SchedulerCentre.SchedulerPriority
 }
